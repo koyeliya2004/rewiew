@@ -1,0 +1,6 @@
+{
+  "name": "CareerPulse AI (Groq)",
+  "description": "AI-powered resume analyzer that provides instant scores, section feedback, and actionable career improvement tips using Groq Llama 3.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
