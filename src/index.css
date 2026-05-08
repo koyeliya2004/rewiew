@@ -12,3 +12,66 @@
     font-family: var(--font-serif);
   }
 }
+
+@layer components {
+  .wave-layer {
+    position: absolute;
+    left: -20%;
+    width: 140%;
+    border-radius: 45%;
+    filter: blur(2px);
+    opacity: 0.55;
+    transform-origin: center;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  .wave-layer--one {
+    bottom: -28%;
+    height: 46%;
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.18) 0%, rgba(14, 165, 233, 0.28) 100%);
+    animation-name: drift-wave;
+    animation-duration: 15s;
+  }
+
+  .wave-layer--two {
+    bottom: -30%;
+    height: 42%;
+    background: linear-gradient(180deg, rgba(147, 197, 253, 0.12) 0%, rgba(56, 189, 248, 0.2) 100%);
+    animation-name: drift-wave-alt;
+    animation-duration: 19s;
+  }
+
+  .wave-layer--three {
+    bottom: -34%;
+    height: 48%;
+    background: linear-gradient(180deg, rgba(191, 219, 254, 0.2) 0%, rgba(125, 211, 252, 0.16) 100%);
+    animation-name: drift-wave;
+    animation-duration: 24s;
+    animation-direction: reverse;
+  }
+}
+
+@keyframes drift-wave {
+  0% {
+    transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateX(-4%) translateY(-1.5%) rotate(-2deg) scale(1.03);
+  }
+  100% {
+    transform: translateX(2%) translateY(0.5%) rotate(1deg) scale(0.99);
+  }
+}
+
+@keyframes drift-wave-alt {
+  0% {
+    transform: translateX(2%) translateY(0) rotate(0deg) scale(1.01);
+  }
+  50% {
+    transform: translateX(-2%) translateY(-2%) rotate(2deg) scale(1.04);
+  }
+  100% {
+    transform: translateX(3%) translateY(1%) rotate(-1deg) scale(1);
+  }
+}
