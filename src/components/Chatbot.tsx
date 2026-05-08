@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, Send, X, Bot, User, Loader2, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { chatWithCoach } from "../lib/groq";
+import { chatWithCoach } from "../lib/ai";
 import { AnalysisResult } from "../types";
 import { cn } from "../lib/utils";
 
@@ -21,7 +21,7 @@ export default function Chatbot({ resumeText, analysis }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: "assistant", 
-      content: "Hi! I'm your CareerPulse AI assistant (Powered by Groq). I've analyzed your resume and found some key areas to discuss. How can I help you improve today?" 
+      content: "Hi! I'm your CareerPulse AI assistant. I've analyzed your resume and found some key areas to discuss. How can I help you improve today?" 
     }
   ]);
   const [input, setInput] = useState("");

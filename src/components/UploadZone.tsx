@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Upload, FileText, X, AlertCircle } from "lucide-react";
+import { Upload, FileText, X, AlertCircle, Loader2 } from "lucide-react";
 import React, { useState, useCallback } from "react";
 import { cn } from "../lib/utils";
 
@@ -78,12 +78,12 @@ export default function UploadZone({ onFileSelect, isAnalyzing }: UploadZoneProp
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
             >
-              <Upload className="w-10 h-10 text-orange-500" />
+              <Loader2 className="w-10 h-10 text-orange-500" />
             </motion.div>
           ) : (
             <Upload className={cn(
               "w-10 h-10 transition-colors duration-300",
-              dragActive ? "text-orange-500" : "text-gray-400"
+              dragActive ? "text-orange-500" : "text-gray-400 group-hover:text-gray-600"
             )} />
           )}
         </div>
@@ -93,7 +93,7 @@ export default function UploadZone({ onFileSelect, isAnalyzing }: UploadZoneProp
             {isAnalyzing ? "Analyzing your profile..." : "Upload your resume"}
           </h3>
           <p className="text-sm text-gray-500 max-w-xs mx-auto">
-            Drop your PDF here or click to browse. Let Gemini craft your competitive edge.
+            Drop your PDF here or click to browse. Let AI craft your competitive edge.
           </p>
         </div>
 

@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, ArrowLeft, RotateCcw, AlertTriangle, X } from "lucide-react";
 import UploadZone from "./components/UploadZone";
 import AnalysisDashboard from "./components/AnalysisDashboard";
-import { analyzeResume } from "./lib/groq";
+import { ParticleBackground } from "./components/ParticleBackground";
+import { analyzeResume } from "./lib/ai";
 import { extractTextFromPdf } from "./lib/utils";
 import { AnalysisResult, AppState } from "./types";
 
@@ -60,11 +61,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-900 selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-900 selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden relative">
+      <ParticleBackground />
       {/* Visual background elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-        <div className="absolute top-0 left-0 w-full h-[600px] bg-[linear-gradient(to_bottom,rgba(255,100,0,0.03),transparent)]"></div>
       </div>
 
       {/* Header */}
@@ -74,7 +75,7 @@ export default function App() {
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-bold text-xl tracking-tight leading-none">CareerPulse</h1>
+            <h1 className="font-bold text-xl tracking-tight leading-none text-gray-900">CareerPulse</h1>
             <span className="text-[10px] uppercase tracking-widest font-black opacity-30">AI Solutions</span>
           </div>
         </div>
@@ -225,7 +226,7 @@ export default function App() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                   </span>
-                  <span className="text-[10px] uppercase font-black tracking-widest leading-none">Powered by Groq Llama 3</span>
+                  <span className="text-[10px] uppercase font-black tracking-widest leading-none">Powered by Premium Intelligence</span>
                 </motion.div>
                 
                 <h2 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[0.95] max-w-3xl mx-auto">

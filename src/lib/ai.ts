@@ -1,6 +1,6 @@
 import { AnalysisResult } from "../types";
 
-interface GroqEnhancement {
+interface AIEnhancement {
   summary: string;
   improvements: string[];
 }
@@ -12,7 +12,7 @@ export async function analyzeResume(resumeText: string): Promise<AnalysisResult>
     body: JSON.stringify({ resumeText }),
   });
 
-  if (!response.ok) throw new Error("Groq analysis failed");
+  if (!response.ok) throw new Error("Analysis failed");
   return await response.json();
 }
 
@@ -28,22 +28,22 @@ export async function chatWithCoach(messages: any[], context: any): Promise<stri
   return data.text;
 }
 
-export async function enhanceWithGroq(resumeText: string): Promise<GroqEnhancement> {
+export async function enhanceWithAI(resumeText: string): Promise<AIEnhancement> {
   try {
-    const response = await fetch("/api/analyze/resume", { // Using the main analysis endpoint for enhancement too if needed or keep existing logic
+    const response = await fetch("/api/analyze/resume", { 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resumeText }),
     });
 
-    if (!response.ok) throw new Error("Groq API error");
+    if (!response.ok) throw new Error("AI enhancement error");
     const data = await response.json();
     return {
       summary: data.summary,
       improvements: data.recommendations
     };
   } catch (error) {
-    console.error("Groq enhancement failed:", error);
+    console.error("AI enhancement failed:", error);
     throw error;
   }
 }

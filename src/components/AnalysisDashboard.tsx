@@ -21,7 +21,7 @@ import {
 import { AnalysisResult } from "../types";
 import { cn } from "../lib/utils";
 import { generateResumeReport } from "../lib/pdf";
-import { enhanceWithGroq } from "../lib/groq";
+import { enhanceWithAI } from "../lib/ai";
 import Chatbot from "./Chatbot";
 
 function CountUp({ end, duration = 2, delay = 0 }: { end: number, duration?: number, delay?: number }) {
@@ -62,11 +62,11 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
     await generateResumeReport(result);
   };
 
-  const handleGroqEnhance = async () => {
+  const handleAIEnhance = async () => {
     if (!result.originalText) return;
     try {
       setIsEnhancing(true);
-      const enhancement = await enhanceWithGroq(result.originalText);
+      const enhancement = await enhanceWithAI(result.originalText);
       setResult(prev => ({
         ...prev,
         summary: enhancement.summary,
@@ -84,12 +84,12 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
       {/* Header Actions */}
       <div className="flex justify-end gap-4">
         <button 
-          onClick={handleGroqEnhance}
+          onClick={handleAIEnhance}
           disabled={isEnhancing}
           className="flex items-center gap-2 px-6 py-3 bg-orange-50 text-orange-700 rounded-2xl font-bold hover:bg-orange-100 transition-all disabled:opacity-50"
         >
           {isEnhancing ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-          Deep Analysis (Groq)
+          Deep AI Analysis
         </button>
         <button 
           onClick={handleDownload}
@@ -111,7 +111,7 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-5 h-5 text-orange-400" />
-                <span className="text-xs uppercase tracking-widest font-bold opacity-70">Gemini Intelligence</span>
+                <span className="text-xs uppercase tracking-widest font-bold opacity-70">AI Intelligence</span>
               </div>
               <h2 className="text-4xl font-light tracking-tight mb-4">
                 Analysis <span className="italic serif">Complete</span>
@@ -167,12 +167,14 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
           items={result.strengths} 
           icon={<CheckCircle2 className="w-6 h-6 text-green-500" />}
           bg="bg-green-50/50"
+          textColor="text-green-700"
         />
         <InsightSection 
           title="Areas for Focus" 
           items={result.weaknesses} 
           icon={<XCircle className="w-6 h-6 text-red-500" />}
           bg="bg-red-50/50"
+          textColor="text-red-700"
         />
       </div>
 
@@ -185,7 +187,7 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
       >
         <div className="flex items-center gap-3 mb-8">
           <Zap className="w-6 h-6 text-orange-500" />
-          <h3 className="text-2xl font-medium tracking-tight">Market Skill Map</h3>
+          <h3 className="text-2xl font-medium tracking-tight text-gray-900">Market Skill Map</h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {result.skills.map((skill, i) => (
@@ -230,7 +232,7 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
         >
           <div className="flex items-center gap-3 mb-8">
             <GraduationCap className="w-6 h-6 text-orange-500" />
-            <h3 className="text-2xl font-medium tracking-tight">Educational Background</h3>
+            <h3 className="text-2xl font-medium tracking-tight text-gray-900">Educational Background</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {result.education.map((edu, i) => (
@@ -266,16 +268,16 @@ export default function AnalysisDashboard({ result: initialResult }: AnalysisDas
           </div>
           <ul className="space-y-4">
             {result.recommendations.map((rec, i) => (
-              <motion.li 
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + (i * 0.1) }}
-                className="flex items-start gap-4 text-orange-100"
-              >
-                <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" />
-                <p className="leading-relaxed"><strong className="text-white">Step {i + 1}:</strong> {rec}</p>
-              </motion.li>
+               <motion.li 
+                 key={i}
+                 initial={{ opacity: 0, x: -10 }}
+                 animate={{ opacity: 1, x: 0 }}
+                 transition={{ delay: 0.6 + (i * 0.1) }}
+                 className="flex items-start gap-4 text-orange-50 font-medium"
+               >
+                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-white/40 flex-shrink-0" />
+                 <p className="leading-relaxed"><strong className="text-white">Step {i + 1}:</strong> {rec}</p>
+               </motion.li>
             ))}
           </ul>
         </div>
@@ -345,7 +347,7 @@ function ScoreCard({ title, score, icon, description, delay }: { title: string, 
   );
 }
 
-function InsightSection({ title, items, icon, bg }: { title: string, items: string[], icon: React.ReactNode, bg: string }) {
+function InsightSection({ title, items, icon, bg, textColor }: { title: string, items: string[], icon: React.ReactNode, bg: string, textColor: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -354,13 +356,13 @@ function InsightSection({ title, items, icon, bg }: { title: string, items: stri
     >
       <div className="flex items-center gap-3 mb-6">
         {icon}
-        <h3 className="text-xl font-bold tracking-tight">{title}</h3>
+        <h3 className={cn("text-xl font-bold tracking-tight", textColor)}>{title}</h3>
       </div>
       <ul className="space-y-4">
         {items.map((item, i) => (
           <li key={i} className="flex items-start gap-3">
-             <div className="mt-2 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0" />
-             <p className="text-sm text-gray-700 leading-relaxed italic serif">{item}</p>
+             <div className={cn("mt-2 w-1 h-1 rounded-full flex-shrink-0", textColor.replace('text-', 'bg-'), "opacity-30")} />
+             <p className={cn("text-sm leading-relaxed italic serif", textColor)}>{item}</p>
           </li>
         ))}
       </ul>
