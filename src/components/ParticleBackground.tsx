@@ -1,260 +1,280 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const TOTAL_PAGES = 7;
-const SYMBOLS = ["📖", "☁️", "⚛️", "🔥", "✨", "💥", "🕳️"];
+type MouseState = {
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  down: boolean;
+  worldX: number;
+  worldY: number;
+};
 
 export const ParticleBackground = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mouseRef = useRef({ x: 0, y: 0, down: false });
-  const [currentPage, setCurrentPage] = useState(0);
-  const targetsRef = useRef<Float32Array | null>(null);
-  const colorsRef = useRef<Float32Array | null>(null);
-  const particleCount = 15000;
-
-  const getPageTargets = (pageId: number, count: number) => {
-    const targets = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    
-    // Choose colors based on "light" vs "dark" context. 
-    // Since the user asked for "white", we'll use darker/muter colors for the particles.
-    const isLightMode = true; 
-
-    for (let i = 0; i < count; i++) {
-        let x = 0, y = 0, z = 0;
-        let r = 0, g = 0, b = 0;
-
-        switch(pageId) {
-            case 0: // Page 0: Open Book
-                const pageSide = i < count / 2 ? -1 : 1;
-                const pU = Math.random(); 
-                const pV = (Math.random() - 0.5) * 2; 
-                const pW = 250;
-                const pH = 350; 
-                x = pW * pU * pageSide;
-                y = (pH / 2) * pV;
-                z = Math.sin(pU * Math.PI) * 40;
-                z += (Math.random() - 0.5) * 10;
-                // Parchment color
-                r = 0.8; g = 0.6; b = 0.4;
-                break;
-            case 1: // Page 1: Cloud
-                x = (Math.random() - 0.5) * 800;
-                y = (Math.random() - 0.5) * 500;
-                z = (Math.random() - 0.5) * 500;
-                r = 0.4; g = 0.6; b = 0.9;
-                break;
-            case 2: // Page 2: Core
-                const phi = Math.acos(-1 + (2 * i) / count);
-                const theta = Math.sqrt(count * Math.PI) * phi;
-                const radius = 200 + (Math.random() * 20);
-                x = radius * Math.cos(theta) * Math.sin(phi);
-                y = radius * Math.sin(theta) * Math.sin(phi);
-                z = radius * Math.cos(phi);
-                r = 0.6; g = 0.4; b = 0.8;
-                break;
-            default:
-                x = (Math.random() - 0.5) * 600;
-                y = (Math.random() - 0.5) * 600;
-                z = (Math.random() - 0.5) * 600;
-                r = 0.5; g = 0.5; b = 0.5;
-        }
-
-        targets[i * 3] = x;
-        targets[i * 3 + 1] = y;
-        targets[i * 3 + 2] = z;
-        colors[i * 3] = r;
-        colors[i * 3 + 1] = g;
-        colors[i * 3 + 2] = b;
-    }
-    return { targets, colors };
-  };
+  const mouseRef = useRef<MouseState>({
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    down: false,
+    worldX: 0,
+    worldY: 0,
+  });
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
+    // --- THREE.JS INITIALIZATION ---
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-    camera.position.z = 700;
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      3000
+    );
+    camera.position.z = 900;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    containerRef.current.appendChild(renderer.domElement);
+    renderer.setClearColor(0xffffff, 0);
+    container.appendChild(renderer.domElement);
 
+    // --- PARTICLE SYSTEM CONSTANTS ---
+    const particleCount = 28000;
+    const penParticleCount = 1000;
+
+    // --- BOOK SYSTEM ---
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
-    const initialData = getPageTargets(0, particleCount);
-    targetsRef.current = initialData.targets;
-    colorsRef.current = initialData.colors;
+    const colors = new Float32Array(particleCount * 3);
+    const targetPositions = new Float32Array(particleCount * 3);
+    const baseColors = new Float32Array(particleCount * 3);
 
-    // Initial random spread
-    for (let i = 0; i < particleCount * 3; i++) {
-      positions[i] = (Math.random() - 0.5) * 2000;
+    const tempColor = new THREE.Color();
+
+    for (let i = 0; i < particleCount; i++) {
+      // Initial Random State
+      positions[i * 3] = (Math.random() - 0.5) * 2000;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 2000;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 1000;
+
+      // Define Book Geometry Targets
+      const pageSide = i < particleCount / 2 ? -1 : 1;
+      const pU = Math.random();
+      const pV = (Math.random() - 0.5) * 2;
+      const pW = 480;
+      const pH = 580;
+
+      targetPositions[i * 3] = pW * pU * pageSide;
+      targetPositions[i * 3 + 1] = (pH / 2) * pV;
+      targetPositions[i * 3 + 2] =
+        Math.sin(pU * Math.PI) * 85 + (Math.random() - 0.5) * 12;
+
+      // Colorful Palette
+      const hueBase = pageSide === -1 ? 0.55 : 0.85;
+      const hue = hueBase + pU * 0.15;
+      tempColor.setHSL(hue % 1, 0.75, 0.45);
+      baseColors[i * 3] = tempColor.r;
+      baseColors[i * 3 + 1] = tempColor.g;
+      baseColors[i * 3 + 2] = tempColor.b;
+
+      // Initial color match
+      colors[i * 3] = tempColor.r;
+      colors[i * 3 + 1] = tempColor.g;
+      colors[i * 3 + 2] = tempColor.b;
     }
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(initialData.colors), 3));
-
-    // Particle Texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 32; canvas.height = 32;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-      grad.addColorStop(0, 'rgba(255,255,255,1)');
-      grad.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 32, 32);
-    }
-    const texture = new THREE.CanvasTexture(canvas);
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 2.2,
+      size: 2.3,
       vertexColors: true,
       transparent: true,
-      opacity: 0.4, // Subtler for white background
-      blending: THREE.NormalBlending, // Normal blending works better on white
+      opacity: 0.75,
+      blending: THREE.NormalBlending,
       sizeAttenuation: true,
-      map: texture,
-      depthWrite: false
+      depthWrite: false,
     });
 
     const particleSystem = new THREE.Points(geometry, material);
     scene.add(particleSystem);
 
-    const onMouseMove = (e: MouseEvent) => {
-      mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    // --- PEN CURSOR SYSTEM ---
+    const penGeometry = new THREE.BufferGeometry();
+    const penPositions = new Float32Array(penParticleCount * 3);
+    const penColors = new Float32Array(penParticleCount * 3);
+
+    for (let i = 0; i < penParticleCount; i++) {
+      const ratio = i / penParticleCount;
+      const angle = Math.random() * Math.PI * 2;
+      const radius =
+        ratio < 0.08 ? ratio * 14 : (1.1 - ratio) * 4.5 + 0.6;
+      const length = ratio * 220;
+
+      penPositions[i * 3] = Math.cos(angle) * radius;
+      penPositions[i * 3 + 1] = length;
+      penPositions[i * 3 + 2] = Math.sin(angle) * radius;
+
+      const pC = new THREE.Color();
+      if (ratio < 0.05) pC.setHex(0xa67c00); // Gold nib
+      else if (ratio < 0.25) pC.setHex(0x333333); // Grip
+      else pC.setHex(0x111111); // Body
+
+      penColors[i * 3] = pC.r;
+      penColors[i * 3 + 1] = pC.g;
+      penColors[i * 3 + 2] = pC.b;
+    }
+
+    penGeometry.setAttribute("position", new THREE.BufferAttribute(penPositions, 3));
+    penGeometry.setAttribute("color", new THREE.BufferAttribute(penColors, 3));
+
+    const penSystem = new THREE.Points(
+      penGeometry,
+      new THREE.PointsMaterial({
+        size: 1.6,
+        vertexColors: true,
+        transparent: true,
+        opacity: 1,
+        depthWrite: false,
+      })
+    );
+    scene.add(penSystem);
+
+    // --- EVENT LISTENERS ---
+    const handleMouseMove = (event: { clientX: number; clientY: number }) => {
+      mouseRef.current.targetX = (event.clientX / window.innerWidth) * 2 - 1;
+      mouseRef.current.targetY = -(event.clientY / window.innerHeight) * 2 + 1;
+      mouseRef.current.worldX = mouseRef.current.targetX * 620;
+      mouseRef.current.worldY = mouseRef.current.targetY * 420;
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mousedown', () => mouseRef.current.down = true);
-    window.addEventListener('mouseup', () => mouseRef.current.down = false);
-    
+    const handleMouseDown = () => {
+      mouseRef.current.down = true;
+    };
+    const handleMouseUp = () => {
+      mouseRef.current.down = false;
+    };
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
-    window.addEventListener('resize', handleResize);
 
-    let frame: number;
+    const onMouseMove = (e: MouseEvent) => handleMouseMove(e);
+    const onTouchStart = (e: TouchEvent) => {
+      mouseRef.current.down = true;
+      if (e.touches[0]) handleMouseMove(e.touches[0]);
+    };
+    const onTouchEnd = () => {
+      mouseRef.current.down = false;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) handleMouseMove(e.touches[0]);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+
+    // --- ANIMATION LOOP ---
+    let rafId = 0;
     const animate = () => {
-      frame = requestAnimationFrame(animate);
-      const posAttr = geometry.attributes.position;
-      const colAttr = geometry.attributes.color;
-      const posArr = posAttr.array as Float32Array;
-      const colArr = colAttr.array as Float32Array;
-      const targets = targetsRef.current!;
-      const colors = colorsRef.current!;
+      rafId = requestAnimationFrame(animate);
+
+      const mouse = mouseRef.current;
+      mouse.x += (mouse.targetX - mouse.x) * 0.15;
+      mouse.y += (mouse.targetY - mouse.y) * 0.15;
+
+      const posAttr = particleSystem.geometry.attributes.position
+        .array as Float32Array;
+      const colAttr = particleSystem.geometry.attributes.color
+        .array as Float32Array;
 
       for (let i = 0; i < particleCount; i++) {
-        const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
         const step = 0.05;
+        const i3 = i * 3;
 
-        // Transition to targets
-        posArr[ix] += (targets[ix] - posArr[ix]) * step;
-        posArr[iy] += (targets[iy] - posArr[iy]) * step;
-        posArr[iz] += (targets[iz] - posArr[iz]) * step;
+        // Position interpolation
+        posAttr[i3] += (targetPositions[i3] - posAttr[i3]) * step;
+        posAttr[i3 + 1] += (targetPositions[i3 + 1] - posAttr[i3 + 1]) * step;
+        posAttr[i3 + 2] += (targetPositions[i3 + 2] - posAttr[i3 + 2]) * step;
 
-        // Color transitions
-        colArr[ix] += (colors[ix] - colArr[ix]) * 0.05;
-        colArr[iy] += (colors[iy] - colArr[iy]) * 0.05;
-        colArr[iz] += (colors[iz] - colArr[iz]) * 0.05;
+        // Interaction
+        const dx = posAttr[i3] - penSystem.position.x;
+        const dy = posAttr[i3 + 1] - penSystem.position.y;
+        const dz = posAttr[i3 + 2] - (penSystem.position.z - 20);
+        const distSq = dx * dx + dy * dy + dz * dz;
 
-        // Interactive "Swirl" reaction
-        const tx = mouseRef.current.x * 500;
-        const ty = mouseRef.current.y * 500;
-        const dx = posArr[ix] - tx;
-        const dy = posArr[iy] - ty;
-        const distSq = dx * dx + dy * dy;
-
-        if (distSq < 20000) {
-          const force = (20000 - distSq) / 20000;
-          
-          // If mouse down, suck them in, otherwise push/swirl them
-          if (mouseRef.current.down) {
-             posArr[ix] -= dx * force * 0.1;
-             posArr[iy] -= dy * force * 0.1;
-          } else {
-             // Swirl effect
-             const angle = 0.1 * force;
-             const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
-             const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
-             posArr[ix] = tx + rx;
-             posArr[iy] = ty + ry;
-          }
+        if (distSq < 14000) {
+          const force = (14000 - distSq) / 14000;
+          const mag = mouse.down ? -0.32 : 0.07;
+          posAttr[i3] += dx * force * mag;
+          posAttr[i3 + 1] += dy * force * mag;
         }
+
+        // Color interpolation
+        colAttr[i3] += (baseColors[i3] - colAttr[i3]) * 0.04;
+        colAttr[i3 + 1] += (baseColors[i3 + 1] - colAttr[i3 + 1]) * 0.04;
+        colAttr[i3 + 2] += (baseColors[i3 + 2] - colAttr[i3 + 2]) * 0.04;
       }
 
-      posAttr.needsUpdate = true;
-      colAttr.needsUpdate = true;
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+      particleSystem.geometry.attributes.color.needsUpdate = true;
 
-      // Rotation and Perspective
-      particleSystem.rotation.y = mouseRef.current.x * 0.15;
-      particleSystem.rotation.x = -mouseRef.current.y * 0.1;
+      // Pen Logic
+      const penZ = mouse.down ? 18 : 100;
+      penSystem.position.x += (mouse.worldX - penSystem.position.x) * 0.25;
+      penSystem.position.y += (mouse.worldY - penSystem.position.y) * 0.25;
+      penSystem.position.z += (penZ - penSystem.position.z) * 0.18;
+
+      penSystem.rotation.z = -0.4 + mouse.x * 0.35;
+      penSystem.rotation.x = 0.5 - mouse.y * 0.25;
+
+      particleSystem.rotation.y = mouse.x * 0.1;
+      particleSystem.rotation.x = -(mouse.y * 0.05);
 
       renderer.render(scene, camera);
     };
+
     animate();
 
+    // --- CLEANUP ---
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchmove", onTouchMove);
+
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
+
       geometry.dispose();
       material.dispose();
+      penGeometry.dispose();
+      (penSystem.material as THREE.Material).dispose();
       renderer.dispose();
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
     };
   }, []);
 
-  const goToPage = (idx: number) => {
-    if (idx < 0 || idx >= TOTAL_PAGES) return;
-    setCurrentPage(idx);
-    const { targets, colors } = getPageTargets(idx, particleCount);
-    targetsRef.current = targets;
-    colorsRef.current = colors;
-  };
-
   return (
-    <div className="fixed inset-0 z-[-1] pointer-events-none">
+    <div className="fixed inset-0 z-0 pointer-events-none">
+      {/* Paper fold indicator */}
+      <div className="fixed left-1/2 top-[10%] bottom-[10%] w-px bg-gradient-to-b from-transparent via-black/[0.04] to-transparent" />
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
-      
-      {/* Interactive Controls Overlay (needs pointer events to be clickable) */}
-      <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-8">
-        <div className="flex justify-center gap-4 pointer-events-auto">
-          <button 
-            onClick={() => goToPage(currentPage - 1)}
-            className="p-2 bg-gray-100 hover:bg-orange-100 rounded-full transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-400 hover:text-orange-600" />
-          </button>
-          <div className="flex items-center gap-2">
-            {SYMBOLS.map((s, i) => (
-              <div 
-                key={i} 
-                onClick={() => goToPage(i)}
-                className={`w-2 h-2 rounded-full cursor-pointer transition-all ${i === currentPage ? 'bg-orange-500 scale-150' : 'bg-gray-200 hover:bg-gray-400'}`}
-              />
-            ))}
-          </div>
-          <button 
-            onClick={() => goToPage(currentPage + 1)}
-            className="p-2 bg-gray-100 hover:bg-orange-100 rounded-full transition-colors"
-          >
-            <ChevronRight className="w-5 h-5 text-gray-400 hover:text-orange-600" />
-          </button>
-        </div>
-      </div>
-
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 text-2xl opacity-20 pointer-events-none">
-        {SYMBOLS[currentPage]}
-      </div>
     </div>
   );
 };
