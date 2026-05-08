@@ -1,260 +1,254 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const TOTAL_PAGES = 7;
-const SYMBOLS = ["📖", "☁️", "⚛️", "🔥", "✨", "💥", "🕳️"];
 
 export const ParticleBackground = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mouseRef = useRef({ x: 0, y: 0, down: false });
-  const [currentPage, setCurrentPage] = useState(0);
-  const targetsRef = useRef<Float32Array | null>(null);
-  const colorsRef = useRef<Float32Array | null>(null);
-  const particleCount = 15000;
-
-  const getPageTargets = (pageId: number, count: number) => {
-    const targets = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    
-    // Choose colors based on "light" vs "dark" context. 
-    // Since the user asked for "white", we'll use darker/muter colors for the particles.
-    const isLightMode = true; 
-
-    for (let i = 0; i < count; i++) {
-        let x = 0, y = 0, z = 0;
-        let r = 0, g = 0, b = 0;
-
-        switch(pageId) {
-            case 0: // Page 0: Open Book
-                const pageSide = i < count / 2 ? -1 : 1;
-                const pU = Math.random(); 
-                const pV = (Math.random() - 0.5) * 2; 
-                const pW = 250;
-                const pH = 350; 
-                x = pW * pU * pageSide;
-                y = (pH / 2) * pV;
-                z = Math.sin(pU * Math.PI) * 40;
-                z += (Math.random() - 0.5) * 10;
-                // Parchment color
-                r = 0.8; g = 0.6; b = 0.4;
-                break;
-            case 1: // Page 1: Cloud
-                x = (Math.random() - 0.5) * 800;
-                y = (Math.random() - 0.5) * 500;
-                z = (Math.random() - 0.5) * 500;
-                r = 0.4; g = 0.6; b = 0.9;
-                break;
-            case 2: // Page 2: Core
-                const phi = Math.acos(-1 + (2 * i) / count);
-                const theta = Math.sqrt(count * Math.PI) * phi;
-                const radius = 200 + (Math.random() * 20);
-                x = radius * Math.cos(theta) * Math.sin(phi);
-                y = radius * Math.sin(theta) * Math.sin(phi);
-                z = radius * Math.cos(phi);
-                r = 0.6; g = 0.4; b = 0.8;
-                break;
-            default:
-                x = (Math.random() - 0.5) * 600;
-                y = (Math.random() - 0.5) * 600;
-                z = (Math.random() - 0.5) * 600;
-                r = 0.5; g = 0.5; b = 0.5;
-        }
-
-        targets[i * 3] = x;
-        targets[i * 3 + 1] = y;
-        targets[i * 3 + 2] = z;
-        colors[i * 3] = r;
-        colors[i * 3 + 1] = g;
-        colors[i * 3 + 2] = b;
-    }
-    return { targets, colors };
-  };
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-    camera.position.z = 700;
+    let scene: THREE.Scene;
+    let camera: THREE.PerspectiveCamera;
+    let renderer: THREE.WebGLRenderer;
+    let particleSystem: THREE.Points;
+    let penSystem: THREE.Points;
+    let targetPositions = new Float32Array();
+    let colors = new Float32Array();
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const particleCount = 28000;
+    const penParticleCount = 1000;
+
+    const mouse = {
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      down: false,
+      worldX: 0,
+      worldY: 0,
+    };
+
+    const createBookGeometry = () => {
+      targetPositions = new Float32Array(particleCount * 3);
+      const tempColor = new THREE.Color();
+
+      for (let i = 0; i < particleCount; i++) {
+        const pageSide = i < particleCount / 2 ? -1 : 1;
+        const pU = Math.random();
+        const pV = (Math.random() - 0.5) * 2;
+
+        const pW = 450;
+        const pH = 550;
+
+        const bx = pW * pU * pageSide;
+        const by = (pH / 2) * pV;
+        let bz = Math.sin(pU * Math.PI) * 90;
+        bz += (Math.random() - 0.5) * 15;
+
+        targetPositions[i * 3] = bx;
+        targetPositions[i * 3 + 1] = by;
+        targetPositions[i * 3 + 2] = bz;
+
+        const hue = pageSide === -1 ? 0.55 + pU * 0.15 : 0.85 + pU * 0.15;
+        tempColor.setHSL(hue % 1, 0.85, 0.6);
+
+        colors[i * 3] = tempColor.r;
+        colors[i * 3 + 1] = tempColor.g;
+        colors[i * 3 + 2] = tempColor.b;
+      }
+    };
+
+    const onMouseMove = (event: MouseEvent | Touch) => {
+      mouse.targetX = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.targetY = -(event.clientY / window.innerHeight) * 2 + 1;
+      mouse.worldX = mouse.targetX * 600;
+      mouse.worldY = mouse.targetY * 400;
+    };
+
+    const onWindowResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 3000);
+    camera.position.z = 950;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     containerRef.current.appendChild(renderer.domElement);
 
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
-    const initialData = getPageTargets(0, particleCount);
-    targetsRef.current = initialData.targets;
-    colorsRef.current = initialData.colors;
+    colors = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
 
-    // Initial random spread
-    for (let i = 0; i < particleCount * 3; i++) {
-      positions[i] = (Math.random() - 0.5) * 2000;
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 2000;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 2000;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 1000;
+      sizes[i] = Math.random() * 2.0 + 0.5;
     }
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(initialData.colors), 3));
-
-    // Particle Texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 32; canvas.height = 32;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-      grad.addColorStop(0, 'rgba(255,255,255,1)');
-      grad.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 32, 32);
-    }
-    const texture = new THREE.CanvasTexture(canvas);
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
 
     const material = new THREE.PointsMaterial({
       size: 2.2,
       vertexColors: true,
       transparent: true,
-      opacity: 0.4, // Subtler for white background
-      blending: THREE.NormalBlending, // Normal blending works better on white
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
-      map: texture,
-      depthWrite: false
     });
 
-    const particleSystem = new THREE.Points(geometry, material);
+    particleSystem = new THREE.Points(geometry, material);
     scene.add(particleSystem);
 
-    const onMouseMove = (e: MouseEvent) => {
-      mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    const penGeometry = new THREE.BufferGeometry();
+    const penPositions = new Float32Array(penParticleCount * 3);
+    const penColors = new Float32Array(penParticleCount * 3);
+
+    for (let i = 0; i < penParticleCount; i++) {
+      const ratio = i / penParticleCount;
+      const angle = Math.random() * Math.PI * 2;
+      const radius = ratio < 0.08 ? ratio * 12 : (1.1 - ratio) * 4 + 0.5;
+      const length = ratio * 200;
+
+      penPositions[i * 3] = Math.cos(angle) * radius;
+      penPositions[i * 3 + 1] = length;
+      penPositions[i * 3 + 2] = Math.sin(angle) * radius;
+
+      const penColor = new THREE.Color();
+      if (ratio < 0.05) penColor.setHex(0xffcc33);
+      else if (ratio < 0.2) penColor.setHex(0x444444);
+      else penColor.setHex(0x111111);
+
+      penColors[i * 3] = penColor.r;
+      penColors[i * 3 + 1] = penColor.g;
+      penColors[i * 3 + 2] = penColor.b;
+    }
+
+    penGeometry.setAttribute("position", new THREE.BufferAttribute(penPositions, 3));
+    penGeometry.setAttribute("color", new THREE.BufferAttribute(penColors, 3));
+
+    penSystem = new THREE.Points(
+      penGeometry,
+      new THREE.PointsMaterial({
+        size: 1.5,
+        vertexColors: true,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    scene.add(penSystem);
+
+    createBookGeometry();
+
+    const onMouseDown = () => {
+      mouse.down = true;
+    };
+    const onMouseUp = () => {
+      mouse.down = false;
+    };
+    const onTouchStart = (e: TouchEvent) => {
+      mouse.down = true;
+      onMouseMove(e.touches[0]);
+    };
+    const onTouchEnd = () => {
+      mouse.down = false;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      onMouseMove(e.touches[0]);
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mousedown', () => mouseRef.current.down = true);
-    window.addEventListener('mouseup', () => mouseRef.current.down = false);
-    
-    const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    };
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", onWindowResize);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchstart", onTouchStart);
+    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("touchmove", onTouchMove);
 
-    let frame: number;
+    let frameId = 0;
     const animate = () => {
-      frame = requestAnimationFrame(animate);
-      const posAttr = geometry.attributes.position;
-      const colAttr = geometry.attributes.color;
-      const posArr = posAttr.array as Float32Array;
-      const colArr = colAttr.array as Float32Array;
-      const targets = targetsRef.current!;
-      const colors = colorsRef.current!;
+      frameId = requestAnimationFrame(animate);
+
+      mouse.x += (mouse.targetX - mouse.x) * 0.15;
+      mouse.y += (mouse.targetY - mouse.y) * 0.15;
+
+      const posAttr = particleSystem.geometry.attributes.position.array as Float32Array;
+      const colAttr = particleSystem.geometry.attributes.color.array as Float32Array;
 
       for (let i = 0; i < particleCount; i++) {
-        const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
         const step = 0.05;
+        posAttr[i * 3] += (targetPositions[i * 3] - posAttr[i * 3]) * step;
+        posAttr[i * 3 + 1] += (targetPositions[i * 3 + 1] - posAttr[i * 3 + 1]) * step;
+        posAttr[i * 3 + 2] += (targetPositions[i * 3 + 2] - posAttr[i * 3 + 2]) * step;
 
-        // Transition to targets
-        posArr[ix] += (targets[ix] - posArr[ix]) * step;
-        posArr[iy] += (targets[iy] - posArr[iy]) * step;
-        posArr[iz] += (targets[iz] - posArr[iz]) * step;
+        const dx = posAttr[i * 3] - penSystem.position.x;
+        const dy = posAttr[i * 3 + 1] - penSystem.position.y;
+        const dz = posAttr[i * 3 + 2] - (penSystem.position.z - 20);
+        const distSq = dx * dx + dy * dy + dz * dz;
 
-        // Color transitions
-        colArr[ix] += (colors[ix] - colArr[ix]) * 0.05;
-        colArr[iy] += (colors[iy] - colArr[iy]) * 0.05;
-        colArr[iz] += (colors[iz] - colArr[iz]) * 0.05;
-
-        // Interactive "Swirl" reaction
-        const tx = mouseRef.current.x * 500;
-        const ty = mouseRef.current.y * 500;
-        const dx = posArr[ix] - tx;
-        const dy = posArr[iy] - ty;
-        const distSq = dx * dx + dy * dy;
-
-        if (distSq < 20000) {
-          const force = (20000 - distSq) / 20000;
-          
-          // If mouse down, suck them in, otherwise push/swirl them
-          if (mouseRef.current.down) {
-             posArr[ix] -= dx * force * 0.1;
-             posArr[iy] -= dy * force * 0.1;
-          } else {
-             // Swirl effect
-             const angle = 0.1 * force;
-             const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
-             const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
-             posArr[ix] = tx + rx;
-             posArr[iy] = ty + ry;
-          }
+        if (distSq < 15000) {
+          const force = (15000 - distSq) / 15000;
+          const mag = mouse.down ? -0.3 : 0.06;
+          posAttr[i * 3] += dx * force * mag;
+          posAttr[i * 3 + 1] += dy * force * mag;
         }
+
+        colAttr[i * 3] += (colors[i * 3] - colAttr[i * 3]) * 0.04;
+        colAttr[i * 3 + 1] += (colors[i * 3 + 1] - colAttr[i * 3 + 1]) * 0.04;
+        colAttr[i * 3 + 2] += (colors[i * 3 + 2] - colAttr[i * 3 + 2]) * 0.04;
       }
 
-      posAttr.needsUpdate = true;
-      colAttr.needsUpdate = true;
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+      particleSystem.geometry.attributes.color.needsUpdate = true;
 
-      // Rotation and Perspective
-      particleSystem.rotation.y = mouseRef.current.x * 0.15;
-      particleSystem.rotation.x = -mouseRef.current.y * 0.1;
+      const penZ = mouse.down ? 20 : 110;
+      penSystem.position.x += (mouse.worldX - penSystem.position.x) * 0.3;
+      penSystem.position.y += (mouse.worldY - penSystem.position.y) * 0.3;
+      penSystem.position.z += (penZ - penSystem.position.z) * 0.15;
+
+      penSystem.rotation.z = -0.4 + mouse.x * 0.4;
+      penSystem.rotation.x = 0.5 - mouse.y * 0.3;
+
+      particleSystem.rotation.y = mouse.x * 0.1;
+      particleSystem.rotation.x = -(mouse.y * 0.05);
 
       renderer.render(scene, camera);
     };
+
     animate();
 
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", onWindowResize);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchmove", onTouchMove);
       geometry.dispose();
       material.dispose();
+      penGeometry.dispose();
       renderer.dispose();
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
+      if (containerRef.current) containerRef.current.innerHTML = "";
     };
   }, []);
 
-  const goToPage = (idx: number) => {
-    if (idx < 0 || idx >= TOTAL_PAGES) return;
-    setCurrentPage(idx);
-    const { targets, colors } = getPageTargets(idx, particleCount);
-    targetsRef.current = targets;
-    colorsRef.current = colors;
-  };
-
   return (
-    <div className="fixed inset-0 z-[-1] pointer-events-none">
-      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
-      
-      {/* Interactive Controls Overlay (needs pointer events to be clickable) */}
-      <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-8">
-        <div className="flex justify-center gap-4 pointer-events-auto">
-          <button 
-            onClick={() => goToPage(currentPage - 1)}
-            className="p-2 bg-gray-100 hover:bg-orange-100 rounded-full transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-400 hover:text-orange-600" />
-          </button>
-          <div className="flex items-center gap-2">
-            {SYMBOLS.map((s, i) => (
-              <div 
-                key={i} 
-                onClick={() => goToPage(i)}
-                className={`w-2 h-2 rounded-full cursor-pointer transition-all ${i === currentPage ? 'bg-orange-500 scale-150' : 'bg-gray-200 hover:bg-gray-400'}`}
-              />
-            ))}
-          </div>
-          <button 
-            onClick={() => goToPage(currentPage + 1)}
-            className="p-2 bg-gray-100 hover:bg-orange-100 rounded-full transition-colors"
-          >
-            <ChevronRight className="w-5 h-5 text-gray-400 hover:text-orange-600" />
-          </button>
-        </div>
-      </div>
-
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 text-2xl opacity-20 pointer-events-none">
-        {SYMBOLS[currentPage]}
-      </div>
+    <div className="fixed inset-0 -z-10 pointer-events-none bg-[#050505]">
+      <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+      <div className="absolute left-1/2 top-[5%] bottom-[5%] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+      <div className="absolute inset-0" />
     </div>
   );
 };
