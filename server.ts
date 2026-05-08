@@ -6,11 +6,22 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy-key' });
 
 const app = express();
 
 app.use(express.json({ limit: '10mb' }));
+
+// Middleware to check for API key
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') && !process.env.GROQ_API_KEY) {
+    return res.status(500).json({ 
+      error: "API Key Missing", 
+      details: "The GROQ_API_KEY is not set in the server environment. Please add it to your environment variables (Vercel/Render/etc.) then redeploy." 
+    });
+  }
+  next();
+});
 
 // API Route for Full Resume Analysis (Replacing Gemini)
 app.post("/api/analyze/resume", async (req, res) => {
