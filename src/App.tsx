@@ -65,7 +65,10 @@ export default function App() {
       <ParticleBackground />
       {/* Visual background elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#fff7ed_0%,#f8fafc_42%,#eff6ff_100%)]" />
+        <div className="wave-layer wave-layer--one" />
+        <div className="wave-layer wave-layer--two" />
+        <div className="wave-layer wave-layer--three" />
       </div>
 
       {/* Header */}
